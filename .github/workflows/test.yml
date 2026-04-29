@@ -96,8 +96,8 @@ jobs:
         with:
           push: true
           tags: |
-            bry633/module-13-assignment:latest
-            bry633/module-13-assignment:${{ github.sha }}
+            bry633/module-14-assignment:latest
+            bry633/module-14-assignment:${{ github.sha }}
           platforms: linux/amd64,linux/arm64
-          cache-from: type=registry,ref=bry633/module-13-assignment:cache
+          cache-from: type=registry,ref=bry633/module-14-assignment:cache
           cache-to: type=inline,mode=max
