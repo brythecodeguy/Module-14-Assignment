@@ -4,6 +4,8 @@ document.addEventListener("DOMContentLoaded", () => {
     setupRegisterForm();
     setupLoginForm();
     setupDashboard();
+    setupViewCalculation();
+    setupEditCalculation();
 });
 
 function showMessage(errorId, successId, message, isError = true) {
@@ -26,8 +28,13 @@ function showMessage(errorId, successId, message, isError = true) {
     }
 
     if (!isError && successBox) {
-        successBox.textContent = message;
+        successBox.innerHTML = message;
         successBox.classList.remove("hidden");
+
+        setTimeout(() => {
+            successBox.classList.add("hidden");
+            successBox.textContent = "";
+        }, 8000);
     }
 }
 
@@ -308,7 +315,21 @@ function setupDashboard() {
                 }
 
                 calculationForm.reset();
-                showMessage("dashboardError", "dashboardSuccess", "Calculation created successfully.", false);
+
+                const formattedResult = data.result !== null
+                    ? parseFloat(data.result.toFixed(4))
+                    : "";
+
+                showMessage(
+                    "dashboardError",
+                    "dashboardSuccess",
+                    `Calculation created successfully.<br>
+                    <span class="block text-2xl font-bold text-emerald-700 mt-2">
+                        Result: ${formattedResult}
+                    </span>`,
+                    false
+                );
+
                 loadCalculations();
             } catch (error) {
                 showMessage("dashboardError", "dashboardSuccess", "Could not connect to the server.");
@@ -357,23 +378,60 @@ function setupDashboard() {
 
                 const inputsText = `${calc.a ?? ""}, ${calc.b ?? ""}`;
 
-                const dateText = calc.created_at
-                    ? new Date(calc.created_at).toLocaleString()
-                    : "";
+                const date = calc.created_at ? new Date(calc.created_at) : null;
+                const datePart = date ? date.toLocaleDateString() : "";
+                const timePart = date ? date.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" }) : "";
 
                 row.innerHTML = `
                     <td class="px-4 py-3 border-b">${calc.type ?? ""}</td>
-                    <td class="px-4 py-3 border-b">${inputsText}</td>
-                    <td class="px-4 py-3 border-b">${calc.result ?? ""}</td>
-                    <td class="px-4 py-3 border-b">${dateText}</td>
+                    <td class="px-4 py-3 border-b whitespace-nowrap">
+                        <span class="inline-flex items-center gap-2 bg-emerald-50 border border-emerald-100 px-3 py-2 rounded-lg">
+                            <span class="text-xs text-gray-500 font-semibold">A:</span>
+                            <span class="font-bold text-gray-800">${calc.a ?? ""}</span>
+                        </span>
+
+                        <span class="inline-flex items-center gap-2 bg-emerald-50 border border-emerald-100 px-3 py-2 rounded-lg ml-2">
+                            <span class="text-xs text-gray-500 font-semibold">B:</span>
+                            <span class="font-bold text-gray-800">${calc.b ?? ""}</span>
+                        </span>
+                    </td>
+                    <td class="px-4 py-3 border-b max-w-[150px]">
+                        <span class="block truncate" title="${calc.result}">
+                            ${calc.result !== null ? parseFloat(calc.result.toFixed(4)) : ""}
+                        </span>
+                    </td>
                     <td class="px-4 py-3 border-b">
-                        <button
-                            type="button"
-                            class="delete-btn rounded-lg bg-red-600 px-3 py-2 text-sm font-medium text-white hover:bg-red-700"
-                            data-id="${calc.id}"
-                        >
-                            Delete
-                        </button>
+                        <div class="leading-tight">
+                            <div>${datePart}</div>
+                            <div class="text-xs text-gray-500">${timePart}</div>
+                        </div>
+                    </td>
+                    <td class="px-4 py-3 border-b">
+                        <div class="flex gap-2">
+
+                            <a
+                                href="/dashboard/view/${calc.id}"
+                                class="rounded-lg bg-blue-100 text-blue-700 px-3 py-2 text-sm font-medium hover:bg-blue-200"
+                            >
+                                View
+                            </a>
+
+                            <a
+                                href="/dashboard/edit/${calc.id}"
+                                class="rounded-lg bg-amber-100 text-amber-700 px-3 py-2 text-sm font-medium hover:bg-amber-200"
+                            >
+                                Edit
+                            </a>
+
+                            <button
+                                type="button"
+                                class="delete-btn rounded-lg bg-red-100 text-red-700 px-3 py-2 text-sm font-medium hover:bg-red-200"
+                                data-id="${calc.id}"
+                            >
+                                Delete
+                            </button>
+
+                        </div>
                     </td>
                 `;
 
@@ -431,4 +489,173 @@ function setupDashboard() {
     }
 
     loadCalculations();
+}
+
+//=============================
+// VIEW CALCULATION PAGE
+//=============================
+
+function setupViewCalculation() {
+    const viewPage = document.getElementById("viewPage");
+    if (!viewPage) return;
+
+    const calculationId = viewPage.dataset.id;
+    const token = localStorage.getItem("access_token");
+
+    if (!token) {
+        window.location.href = "/login";
+        return;
+    }
+
+    const errorAlert = document.getElementById("errorAlert");
+
+    function showError(message) {
+        errorAlert.textContent = message;
+        errorAlert.classList.remove("hidden");
+    }
+
+    function formatDate(value) {
+        return value ? new Date(value).toLocaleString() : "N/A";
+    }
+
+    fetch(`/calculations/${calculationId}`, {
+        headers: { "Authorization": `Bearer ${token}` }
+    })
+        .then((response) => {
+            if (response.status === 401) {
+                localStorage.clear();
+                window.location.href = "/login";
+                return null;
+            }
+
+            if (!response.ok) {
+                throw new Error("Calculation not found or unavailable.");
+            }
+
+            return response.json();
+        })
+        .then((calc) => {
+            if (!calc) return;
+
+            document.getElementById("loadingState").classList.add("hidden");
+            document.getElementById("calculationCard").classList.remove("hidden");
+
+            document.getElementById("calcResult").textContent = calc.result;
+            document.getElementById("calcType").textContent = calc.type;
+            document.getElementById("calcA").textContent = calc.a;
+            document.getElementById("calcB").textContent = calc.b;
+            document.getElementById("calcCreated").textContent = formatDate(calc.created_at);
+            document.getElementById("calcUpdated").textContent = formatDate(calc.updated_at);
+            document.getElementById("editLink").href = `/dashboard/edit/${calc.id}`;
+
+            let operator = "?";
+
+            if (calc.type === "addition") operator = "+";
+            if (calc.type === "subtraction") operator = "-";
+            if (calc.type === "multiplication") operator = "×";
+            if (calc.type === "division") operator = "÷";
+
+            document.getElementById("visualA").textContent = calc.a;
+            document.getElementById("visualOperator").textContent = operator;
+            document.getElementById("visualB").textContent = calc.b;
+            document.getElementById("visualResult").textContent =
+                calc.result !== null ? parseFloat(calc.result.toFixed(4)) : "";
+
+            document.getElementById("deleteBtn").addEventListener("click", async () => {
+                if (!confirm("Delete this calculation?")) return;
+
+                const deleteResponse = await fetch(`/calculations/${calc.id}`, {
+                    method: "DELETE",
+                    headers: { "Authorization": `Bearer ${token}` }
+                });
+
+                if (!deleteResponse.ok) {
+                    showError("Failed to delete calculation.");
+                    return;
+                }
+
+                window.location.href = "/dashboard";
+            });
+        })
+        .catch((error) => {
+            document.getElementById("loadingState").classList.add("hidden");
+            showError(error.message || "Could not load calculation.");
+        });
+}
+
+function setupEditCalculation() {
+    const editPage = document.getElementById("editPage");
+    if (!editPage) return;
+
+    const calculationId = editPage.dataset.id;
+    const token = localStorage.getItem("access_token");
+
+    if (!token) {
+        window.location.href = "/login";
+        return;
+    }
+
+    const errorAlert = document.getElementById("errorAlert");
+    const successAlert = document.getElementById("successAlert");
+
+    function showError(message) {
+        errorAlert.textContent = message;
+        errorAlert.classList.remove("hidden");
+    }
+
+    function showSuccess(message) {
+        successAlert.textContent = message;
+        successAlert.classList.remove("hidden");
+    }
+
+    fetch(`/calculations/${calculationId}`, {
+        headers: { "Authorization": `Bearer ${token}` }
+    })
+        .then((response) => response.json())
+        .then((calc) => {
+            document.getElementById("type").value = calc.type;
+            document.getElementById("a").value = calc.a;
+            document.getElementById("b").value = calc.b;
+        })
+        .catch(() => {
+            showError("Failed to load calculation.");
+        });
+
+    document.getElementById("editForm").addEventListener("submit", async (event) => {
+        event.preventDefault();
+
+        const type = document.getElementById("type").value;
+        const a = parseFloat(document.getElementById("a").value);
+        const b = parseFloat(document.getElementById("b").value);
+
+        if (Number.isNaN(a) || Number.isNaN(b)) {
+            showError("Please enter two valid numbers.");
+            return;
+        }
+
+        if (type === "division" && b === 0) {
+            showError("Division by zero is not allowed.");
+            return;
+        }
+
+        const response = await fetch(`/calculations/${calculationId}`, {
+            method: "PUT",
+            headers: {
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${token}`
+            },
+            body: JSON.stringify({ type, a, b })
+        });
+
+        if (!response.ok) {
+            showError("Failed to update calculation.");
+            return;
+        }
+
+        showSuccess("Calculation updated successfully.");
+
+        setTimeout(() => {
+            window.location.href = `/dashboard/view/${calculationId}`;
+        }, 800);
+    });
 }

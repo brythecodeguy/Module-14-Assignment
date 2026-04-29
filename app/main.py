@@ -70,6 +70,20 @@ async def dashboard_page(request: Request):
 async def health():
     return {"status": "ok"}
 
+@app.get("/dashboard/view/{calculation_id}", response_class=HTMLResponse)
+async def view_calculation_page(request: Request, calculation_id: str):
+    return templates.TemplateResponse(
+        "view_calculation.html",
+        {"request": request, "calculation_id": calculation_id}
+    )
+
+
+@app.get("/dashboard/edit/{calculation_id}", response_class=HTMLResponse)
+async def edit_calculation_page(request: Request, calculation_id: str):
+    return templates.TemplateResponse(
+        "edit_calculation.html",
+        {"request": request, "calculation_id": calculation_id}
+    )
 
 # -----------------------------
 # Existing calculator schemas
