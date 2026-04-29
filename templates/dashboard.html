@@ -1,0 +1,140 @@
+{% extends "layout.html" %}
+
+{% block title %}Dashboard{% endblock %}
+
+{% block content %}
+<div class="min-h-screen bg-gradient-to-br from-emerald-50 to-slate-100 px-4 py-8">
+  <div class="max-w-6xl mx-auto space-y-6">
+
+    <div class="bg-white/90 backdrop-blur-sm shadow-xl border border-emerald-100 rounded-2xl p-6">
+      <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+          <h2 class="text-3xl font-bold tracking-tight text-gray-800">Calculations Dashboard</h2>
+          <p id="welcomeMessage" class="mt-1 text-sm text-gray-500">Welcome back.</p>
+        </div>
+
+        <button
+          id="logoutBtn"
+          type="button"
+          class="inline-flex items-center justify-center rounded-xl bg-red-600 px-4 py-2 text-white font-semibold shadow-md hover:bg-red-700 transition duration-200 ease-in-out"
+        >
+          Logout
+        </button>
+      </div>
+    </div>
+
+    <div id="dashboardError" class="hidden bg-red-100 border border-red-300 text-red-700 px-4 py-3 rounded-xl text-sm"></div>
+    <div id="dashboardSuccess" class="hidden bg-emerald-100 border border-emerald-300 text-emerald-700 px-4 py-3 rounded-xl text-sm"></div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+      <div class="lg:col-span-1">
+        <div class="bg-white/90 backdrop-blur-sm shadow-xl border border-emerald-100 rounded-2xl p-6">
+          <h3 class="text-xl font-semibold text-gray-800 mb-4">New Calculation</h3>
+
+          <form id="calculationForm" class="space-y-4">
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+                <label for="calcA" class="block text-sm font-medium text-gray-700 mb-1">
+                First Number
+                </label>
+                <input
+                type="number"
+                id="calcA"
+                name="a"
+                placeholder="Enter first number"
+                class="w-full rounded-xl border border-gray-300 px-4 py-3 shadow-sm focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 focus:outline-none"
+                >
+            </div>
+
+            <div>
+                <label for="calcB" class="block text-sm font-medium text-gray-700 mb-1">
+                    Second Number
+                </label>
+                <input
+                type="number"
+                id="calcB"
+                name="b"
+                placeholder="Enter second number"
+                class="w-full rounded-xl border border-gray-300 px-4 py-3 shadow-sm focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 focus:outline-none"
+                >
+            </div>
+        </div>
+
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">
+                    Operation
+                </label>
+
+                <input type="hidden" id="calcType" value="addition">
+
+                <div class="grid grid-cols-2 gap-3">
+
+                    <button type="button"
+                        class="operation-btn bg-white text-gray-700 font-semibold py-3 rounded-xl transition hover:bg-gray-50"
+                        data-value="addition">
+                        Add
+                    </button>
+
+                    <button type="button"
+                        class="operation-btn bg-white text-gray-700 font-semibold py-3 rounded-xl transition hover:bg-gray-50"
+                        data-value="subtraction">
+                        Subtract
+                    </button>
+
+                    <button type="button"
+                        class="operation-btn bg-white text-gray-700 font-semibold py-3 rounded-xl transition hover:bg-gray-50"
+                        data-value="multiplication">
+                        Multiply
+                    </button>
+
+                    <button type="button"
+                        class="operation-btn bg-white text-gray-700 font-semibold py-3 rounded-xl transition hover:bg-gray-50"
+                        data-value="division">
+                        Divide
+                    </button>
+
+                </div>
+                </div>
+
+            <button
+              type="submit"
+              class="w-full py-3 px-4 rounded-xl shadow-md text-sm font-semibold text-white bg-emerald-600 hover:bg-emerald-700 transition duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-400"
+            >
+              Calculate
+            </button>
+          </form>
+        </div>
+      </div>
+
+      <div class="lg:col-span-2">
+        <div class="bg-white/90 backdrop-blur-sm shadow-xl border border-emerald-100 rounded-2xl p-6">
+          <h3 class="text-xl font-semibold text-gray-800 mb-4">Calculation History</h3>
+
+          <div class="overflow-x-auto">
+            <table class="min-w-full">
+              <thead>
+                <tr class="border-b border-gray-200 text-left text-sm text-gray-500">
+                  <th class="px-4 py-3">Type</th>
+                  <th class="px-4 py-3">Inputs</th>
+                  <th class="px-4 py-3">Result</th>
+                  <th class="px-4 py-3">Date</th>
+                  <th class="px-4 py-3">Action</th>
+                </tr>
+              </thead>
+              <tbody id="calculationsTable" class="text-sm text-gray-700">
+                <tr>
+                  <td colspan="5" class="px-4 py-6 text-center text-gray-400">
+                    Loading calculations...
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+{% endblock %}
