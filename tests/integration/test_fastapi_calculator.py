@@ -1,8 +1,8 @@
 # tests/integration/test_fastapi_calculator.py
 
-import pytest  # Import the pytest framework for writing and running tests
-from fastapi.testclient import TestClient  # Import TestClient for simulating API requests
-from app.main import app  # Import the FastAPI app instance from your main application file
+import pytest  
+from fastapi.testclient import TestClient 
+from app.main import app  
 from types import SimpleNamespace
 from fastapi import HTTPException
 from datetime import datetime
@@ -814,4 +814,16 @@ def test_register_page(client):
 
 def test_dashboard_page(client):
     response = client.get("/dashboard")
+    assert response.status_code == 200
+
+#-----------------------------------
+#PAGE ROUTES (coverage for the GET routes that render templates)
+#-----------------------------------
+def test_view_calculation_page(client):
+    response = client.get("/dashboard/view/123")
+    assert response.status_code == 200
+
+
+def test_edit_calculation_page(client):
+    response = client.get("/dashboard/edit/123")
     assert response.status_code == 200

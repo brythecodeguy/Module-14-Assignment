@@ -411,7 +411,7 @@ function setupDashboard() {
 
                             <a
                                 href="/dashboard/view/${calc.id}"
-                                class="rounded-lg bg-blue-100 text-blue-700 px-3 py-2 text-sm font-medium hover:bg-blue-200"
+                                class="rounded-lg bg-emerald-100 text-emerald-700 px-3 py-2 text-sm font-medium hover:bg-emerald-200"
                             >
                                 View
                             </a>
@@ -601,25 +601,87 @@ function setupEditCalculation() {
     function showError(message) {
         errorAlert.textContent = message;
         errorAlert.classList.remove("hidden");
+        successAlert.classList.add("hidden");
     }
 
     function showSuccess(message) {
         successAlert.textContent = message;
         successAlert.classList.remove("hidden");
+        errorAlert.classList.add("hidden");
+    }
+
+    function getOperator(type) {
+        if (type === "addition") return "+";
+        if (type === "subtraction") return "-";
+        if (type === "multiplication") return "×";
+        if (type === "division") return "÷";
+        return "?";
+    }
+
+    function calculatePreview(type, a, b) {
+        if (Number.isNaN(a) || Number.isNaN(b)) return "";
+
+        if (type === "addition") return a + b;
+        if (type === "subtraction") return a - b;
+        if (type === "multiplication") return a * b;
+        if (type === "division") {
+            if (b === 0) return "Cannot divide by zero";
+            return a / b;
+        }
+
+        return "";
+    }
+
+    function formatResult(result) {
+        if (result === "" || typeof result === "string") return result;
+        return parseFloat(result.toFixed(4));
+    }
+
+    function updatePreview() {
+        const type = document.getElementById("type").value;
+        const a = parseFloat(document.getElementById("a").value);
+        const b = parseFloat(document.getElementById("b").value);
+
+        document.getElementById("previewA").textContent = Number.isNaN(a) ? "" : a;
+        document.getElementById("previewOperator").textContent = getOperator(type);
+        document.getElementById("previewB").textContent = Number.isNaN(b) ? "" : b;
+
+        const result = calculatePreview(type, a, b);
+        document.getElementById("previewResult").textContent = formatResult(result);
     }
 
     fetch(`/calculations/${calculationId}`, {
         headers: { "Authorization": `Bearer ${token}` }
     })
-        .then((response) => response.json())
+        .then((response) => {
+            if (response.status === 401) {
+                localStorage.clear();
+                window.location.href = "/login";
+                return null;
+            }
+
+            if (!response.ok) {
+                throw new Error("Failed to load calculation.");
+            }
+
+            return response.json();
+        })
         .then((calc) => {
+            if (!calc) return;
+
             document.getElementById("type").value = calc.type;
             document.getElementById("a").value = calc.a;
             document.getElementById("b").value = calc.b;
+
+            updatePreview();
         })
         .catch(() => {
             showError("Failed to load calculation.");
         });
+
+    document.getElementById("type").addEventListener("change", updatePreview);
+    document.getElementById("a").addEventListener("input", updatePreview);
+    document.getElementById("b").addEventListener("input", updatePreview);
 
     document.getElementById("editForm").addEventListener("submit", async (event) => {
         event.preventDefault();
