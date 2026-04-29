@@ -1,26 +1,41 @@
-# Module 13
+# Module 14
 
 ## Module Overview
 
-This module builds on the FastAPI application by adding a complete full-stack experience, including a frontend interface, JWT-based authentication, database integration, Docker deployment, and full test coverage.
+This module extends the FastAPI application into a complete full-stack system by implementing BREAD functionality (Browse, Read, Edit, Add, Delete), enhanced frontend pages, JWT-based authentication, database integration, Docker deployment, and full test coverage.
 
-The system allows users to register, log in, and perform calculations through a user-friendly interface. All calculations are stored in a PostgreSQL database and are tied to the authenticated user. Protected routes require JWT authentication using OAuth2.
+The system allows users to register, log in, and manage calculations through an interactive frontend. All calculations are stored in a PostgreSQL database and are tied to the authenticated user. Protected routes require JWT authentication using OAuth2.
 
 ---
 
 ## Frontend Interface
 
-A simple frontend was implemented using HTML, CSS, and JavaScript to interact with the FastAPI backend.
+The frontend was expanded using HTML, CSS, and JavaScript to provide a more complete user experience.
 
 ### Features
 
 - Login and registration pages  
 - Dashboard for performing calculations  
+- View Calculation page (Read)  
+- Edit Calculation page (Update)  
+- Delete functionality with confirmation  
 - Dynamic UI updates based on user actions  
 - Error and success message handling  
-- Button-based calculation system  
+- Styled UI with improved layout and user flow  
 
 The frontend communicates with the backend using `fetch` requests and handles authentication using JWT tokens.
+
+---
+
+## BREAD Functionality
+
+The application now fully supports:
+
+- **Browse** – View all user calculations in the dashboard  
+- **Read** – View a specific calculation with detailed information  
+- **Edit** – Update calculation inputs and type  
+- **Add** – Create new calculations  
+- **Delete** – Remove calculations from the database  
 
 ---
 
@@ -48,7 +63,7 @@ This starts:
 
 ## Docker Hub Repository
 
-<https://hub.docker.com/r/bry633/module-12-assignment>
+<https://hub.docker.com/r/bry633/module-14-assignment>
 
 ---
 
@@ -57,11 +72,13 @@ This starts:
 FastAPI (Swagger UI):  
 <http://localhost:8000/docs>  
 
-Frontend Pages:  
+Frontend Pages:
 
 - <http://localhost:8000/login>  
 - <http://localhost:8000/register>  
 - <http://localhost:8000/dashboard>  
+- <http://localhost:8000/dashboard/view/{id}>  
+- <http://localhost:8000/dashboard/edit/{id}>  
 
 pgAdmin:  
 <http://localhost:5050>  
@@ -130,8 +147,6 @@ All calculation endpoints require authentication.
 
 POST `/calculations`
 
-Example:
-
 ```json
 {
   "a": 10,
@@ -158,6 +173,22 @@ Returns all calculations for the authenticated user.
 
 ---
 
+### Update Calculation
+
+PUT `/calculations/{id}`
+
+Updates calculation inputs and type.
+
+---
+
+### Delete Calculation
+
+DELETE `/calculations/{id}`
+
+Removes a calculation from the database.
+
+---
+
 ## Calculation System
 
 Supports the following operations:
@@ -175,6 +206,8 @@ Supports the following operations:
 - Error handling (e.g., division by zero)  
 - User-specific data storage  
 - Results persisted in database  
+- Full BREAD functionality  
+- Improved frontend UX  
 
 ---
 
@@ -183,7 +216,7 @@ Supports the following operations:
 Run tests:
 
 ```bash
-pytest --run-slow --cov=app --cov-fail-under=100
+python -m pytest --cov=app --cov-fail-under=100
 ```
 
 Includes:
@@ -194,10 +227,26 @@ Includes:
 - Authentication tests  
 - Database tests  
 - Frontend route tests  
+- Playwright End-to-End (E2E) tests  
 
-Results:
+### E2E Test Coverage
 
-- 189 tests passing  
+- Positive scenarios:
+  - Create calculation  
+  - View calculation  
+  - Edit calculation  
+  - Delete calculation  
+
+- Negative scenarios:
+  - Invalid input (e.g., division by zero)  
+  - Unauthorized access (redirect to login)  
+
+---
+
+## Results
+
+- 185 tests passing  
+- 1 skipped  
 - 100% code coverage  
 
 ---
@@ -222,8 +271,6 @@ GitHub Actions pipeline includes:
 - Protected API routes  
 - Secure token handling (localStorage + Authorization header)  
 - Dependency vulnerability scanning (Trivy)  
-- Fixed critical vulnerability:
-  - python-multipart upgraded to secure version  
 
 ---
 
@@ -241,12 +288,11 @@ Includes:
 
 ## Reflection
 
-Reflection on experience with this module:
-
-- [Module13_Reflection.pdf](./Module13_Reflection.pdf) – Reflection  
+- [Module14_Reflection.pdf](./Module14_Reflection.pdf) – Reflection
+- [Module14_Screenshots.pdf](./Module14_Screenshots.pdf) – Screenshots
 
 ---
 
 ## Summary
 
-This project brings together frontend development, backend logic, authentication, database integration, testing, and deployment into a complete full-stack application. It demonstrates how modern web systems are built, secured, tested, and deployed using industry-relevant tools and practices.
+This module completes the full-stack FastAPI application by integrating frontend development, backend logic, authentication, database operations, BREAD functionality, testing, and deployment. It demonstrates how many applications are built, secured, tested, and deployed using industry relevant tools and practices.
