@@ -1,6 +1,7 @@
 # tests/integration/test_user_auth.py
 import pytest
 import asyncio
+import threading
 from app.models.user import User
 
 from datetime import timedelta
@@ -10,6 +11,28 @@ from fastapi import HTTPException
 from app.auth import jwt as jwt_module
 from app.schemas.token import TokenType
 from app.schemas.user import UserCreate
+
+def run_async(coro):
+    result = {}
+
+    def runner():
+        try:
+            result["value"] = asyncio.run(coro)
+        except Exception as error:
+            result["error"] = error
+
+    thread = threading.Thread(target=runner)
+    thread.start()
+    thread.join()
+
+    if "error" in result:
+        raise result["error"]
+
+    return result.get("value")
+
+@pytest.fixture
+def anyio_backend():
+    return "asyncio"
 
 def test_password_hashing(db_session, fake_user_data):
     original_password = "TestPass123!"
@@ -276,7 +299,7 @@ def test_decode_token_success(monkeypatch):
 
     monkeypatch.setattr(jwt_module, "is_blacklisted", fake_is_blacklisted)
 
-    payload = asyncio.run(jwt_module.decode_token(token, TokenType.ACCESS))
+    payload = run_async(jwt_module.decode_token(token, TokenType.ACCESS))
 
     assert payload["sub"] == "123"
     assert payload["type"] == TokenType.ACCESS.value
@@ -292,7 +315,7 @@ def test_decode_token_invalid_type(monkeypatch):
     monkeypatch.setattr(jwt_module, "is_blacklisted", fake_is_blacklisted)
 
     with pytest.raises(HTTPException) as exc_info:
-        asyncio.run(jwt_module.decode_token(token, TokenType.ACCESS))
+        run_async(jwt_module.decode_token(token, TokenType.ACCESS))
 
     assert exc_info.value.status_code == 401
     assert exc_info.value.detail == "Could not validate credentials"
@@ -307,10 +330,11 @@ def test_decode_token_blacklisted(monkeypatch):
     monkeypatch.setattr(jwt_module, "is_blacklisted", fake_is_blacklisted)
 
     with pytest.raises(HTTPException) as exc_info:
-        asyncio.run(jwt_module.decode_token(token, TokenType.ACCESS))
+        run_async(jwt_module.decode_token(token, TokenType.ACCESS))
 
     assert exc_info.value.status_code == 401
     assert exc_info.value.detail == "Token has been revoked"
+
 
 
 def test_decode_token_expired(monkeypatch):
@@ -326,10 +350,11 @@ def test_decode_token_expired(monkeypatch):
     monkeypatch.setattr(jwt_module, "is_blacklisted", fake_is_blacklisted)
 
     with pytest.raises(HTTPException) as exc_info:
-        asyncio.run(jwt_module.decode_token(token, TokenType.ACCESS))
+        run_async(jwt_module.decode_token(token, TokenType.ACCESS))
 
     assert exc_info.value.status_code == 401
     assert exc_info.value.detail == "Token has expired"
+
 
 
 def test_decode_token_invalid_token(monkeypatch):
@@ -339,7 +364,7 @@ def test_decode_token_invalid_token(monkeypatch):
     monkeypatch.setattr(jwt_module, "is_blacklisted", fake_is_blacklisted)
 
     with pytest.raises(HTTPException) as exc_info:
-        asyncio.run(jwt_module.decode_token("not.a.real.token", TokenType.ACCESS))
+        run_async(jwt_module.decode_token("not.a.real.token", TokenType.ACCESS))
 
     assert exc_info.value.status_code == 401
     assert exc_info.value.detail == "Could not validate credentials"
@@ -361,7 +386,6 @@ class FakeRedis:
 
 def test_add_to_blacklist(monkeypatch):
     from app.auth import redis as redis_module
-    import asyncio
 
     fake = FakeRedis()
 
@@ -370,14 +394,13 @@ def test_add_to_blacklist(monkeypatch):
 
     monkeypatch.setattr(redis_module, "get_redis", fake_get_redis)
 
-    asyncio.run(redis_module.add_to_blacklist("abc123", 60))
+    run_async(redis_module.add_to_blacklist("abc123", 60))
 
     assert "blacklist:abc123" in fake.store
 
 
 def test_is_blacklisted_true(monkeypatch):
     from app.auth import redis as redis_module
-    import asyncio
 
     fake = FakeRedis()
     fake.store["blacklist:abc123"] = "1"
@@ -387,14 +410,14 @@ def test_is_blacklisted_true(monkeypatch):
 
     monkeypatch.setattr(redis_module, "get_redis", fake_get_redis)
 
-    result = asyncio.run(redis_module.is_blacklisted("abc123"))
+    result = run_async(redis_module.is_blacklisted("abc123"))
 
     assert result == 1
 
 
+
 def test_is_blacklisted_false(monkeypatch):
     from app.auth import redis as redis_module
-    import asyncio
 
     fake = FakeRedis()
 
@@ -403,13 +426,13 @@ def test_is_blacklisted_false(monkeypatch):
 
     monkeypatch.setattr(redis_module, "get_redis", fake_get_redis)
 
-    result = asyncio.run(redis_module.is_blacklisted("abc123"))
+    result = run_async(redis_module.is_blacklisted("abc123"))
 
     assert result == 0
 
+
 def test_get_redis_caches_instance(monkeypatch):
     from app.auth import redis as redis_module
-    import asyncio
 
     class FakeRedis:
         pass
@@ -424,11 +447,12 @@ def test_get_redis_caches_instance(monkeypatch):
 
     monkeypatch.setattr(redis_module.aioredis, "from_url", fake_from_url)
 
-    first = asyncio.run(redis_module.get_redis())
-    second = asyncio.run(redis_module.get_redis())
+    first = run_async(redis_module.get_redis())
+    second = run_async(redis_module.get_redis())
 
     assert first is fake_instance
     assert second is fake_instance
+
 
 def test_jwt_get_current_user_success(monkeypatch):
     async def fake_decode_token(token, token_type, verify_exp=True):
@@ -447,9 +471,10 @@ def test_jwt_get_current_user_success(monkeypatch):
 
     monkeypatch.setattr(jwt_module, "decode_token", fake_decode_token)
 
-    user = asyncio.run(jwt_module.get_current_user(token="abc", db=FakeDB()))
+    user = run_async(jwt_module.get_current_user(token="abc", db=FakeDB()))
     assert user.id == "123"
     assert user.is_active is True
+
 
 
 def test_jwt_get_current_user_not_found(monkeypatch):
@@ -470,10 +495,11 @@ def test_jwt_get_current_user_not_found(monkeypatch):
     monkeypatch.setattr(jwt_module, "decode_token", fake_decode_token)
 
     with pytest.raises(HTTPException) as exc_info:
-        asyncio.run(jwt_module.get_current_user(token="abc", db=FakeDB()))
+        run_async(jwt_module.get_current_user(token="abc", db=FakeDB()))
 
     assert exc_info.value.status_code == 401
     assert "User not found" in exc_info.value.detail
+
 
 
 def test_jwt_get_current_user_inactive(monkeypatch):
@@ -494,10 +520,11 @@ def test_jwt_get_current_user_inactive(monkeypatch):
     monkeypatch.setattr(jwt_module, "decode_token", fake_decode_token)
 
     with pytest.raises(HTTPException) as exc_info:
-        asyncio.run(jwt_module.get_current_user(token="abc", db=FakeDB()))
+        run_async(jwt_module.get_current_user(token="abc", db=FakeDB()))
 
     assert exc_info.value.status_code == 401
     assert "Inactive user" in exc_info.value.detail
+
 
 
 def test_jwt_get_current_user_decode_failure(monkeypatch):
@@ -511,10 +538,11 @@ def test_jwt_get_current_user_decode_failure(monkeypatch):
     monkeypatch.setattr(jwt_module, "decode_token", fake_decode_token)
 
     with pytest.raises(HTTPException) as exc_info:
-        asyncio.run(jwt_module.get_current_user(token="abc", db=FakeDB()))
+        run_async(jwt_module.get_current_user(token="abc", db=FakeDB()))
 
     assert exc_info.value.status_code == 401
     assert "bad token" in exc_info.value.detail
+
 
 
 def test_decode_token_verify_exp_false(monkeypatch):
@@ -529,8 +557,9 @@ def test_decode_token_verify_exp_false(monkeypatch):
 
     monkeypatch.setattr(jwt_module, "is_blacklisted", fake_is_blacklisted)
 
-    payload = asyncio.run(jwt_module.decode_token(token, TokenType.ACCESS, verify_exp=False))
+    payload = run_async(jwt_module.decode_token(token, TokenType.ACCESS, verify_exp=False))
     assert payload["sub"] == "123"
+
 
 def test_decode_token_invalid_type_branch(monkeypatch):
     async def fake_is_blacklisted(jti):
@@ -547,7 +576,7 @@ def test_decode_token_invalid_type_branch(monkeypatch):
     monkeypatch.setattr(jwt_module.jwt, "decode", fake_decode)
 
     with pytest.raises(HTTPException) as exc_info:
-        asyncio.run(jwt_module.decode_token("fake-token", TokenType.ACCESS))
+        run_async(jwt_module.decode_token("fake-token", TokenType.ACCESS))
 
     assert exc_info.value.status_code == 401
     assert exc_info.value.detail == "Invalid token type"
